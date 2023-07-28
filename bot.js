@@ -1,5 +1,9 @@
-const { Client, Events, GatewayIntentBits } = require('discord.js');
+const {
+    Client, Events, MessageActionRow, MessageButton, ButtonBuilder, GuildChannel, Message,
+    ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder
+} = require('discord.js');
 const dotenv = require('dotenv');
+
 
 dotenv.config();
 
@@ -24,6 +28,24 @@ let correctWord = '';
 client.once(Events.ClientReady, c => {
     console.log('Bot is ready to speak!!!');
 });
+
+const playWordleButton = new ButtonBuilder()
+    .setCustomId('playWordleButton')
+    .setLabel('Play Wordle')
+    .setStyle(1);
+
+const gameMenu = new ActionRowBuilder()
+    .addComponents(playWordleButton);
+
+
+const row2 = new ActionRowBuilder()
+for (let i = 0; i < 5; i++) {
+    row2.addComponents(new ButtonBuilder()
+        .setCustomId('noGuess' + i)
+        .setLabel('_')
+        .setStyle(2)
+        .setDisabled(true));
+}
 
 
 client.on('messageCreate', async (msg) => {
