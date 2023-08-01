@@ -9,7 +9,7 @@ dotenv.config();
 
 const client = new Client({
     intents: [
-        'Guilds', 'GuildMessages', 'MessageContent']
+        'Guilds', 'GuildMessages', 'MessageContent', 'DirectMessages']
 })
 
 const channel = client.channels.cache.get('1133762136917676145');
@@ -24,6 +24,10 @@ let guesses = [];
 let wordleStart = false;
 let correctWord = '';
 
+let twentyQsStart = false;
+
+let gameChannel = '';
+
 
 client.once(Events.ClientReady, c => {
     console.log('Bot is ready to speak!!!');
@@ -35,7 +39,8 @@ const playWordleButton = new ButtonBuilder()
     .setStyle(1);
 
 const gameMenu = new ActionRowBuilder()
-    .addComponents(playWordleButton);
+    .addComponents(playWordleButton)
+    .addComponents(playTwentyQsButton);
 
 
 const row2 = new ActionRowBuilder()
@@ -47,8 +52,33 @@ for (let i = 0; i < 5; i++) {
         .setDisabled(true));
 }
 
+//const allowedUserIds = ['353053962922098700', '744654927283880012']; // Replace with the actual IDs of the two members you want to allow
+const allowedUserIds = []; // Replace with the actual IDs of the two members you want to allow
+
 
 client.on('messageCreate', async (msg) => {
+
+    if (msg.channel instanceof DMChannel) {
+        // Respond to the private message
+        if (msg.author.id === client.user.id) {
+            return;
+        }
+
+        //const channel = client.channels.cache.get('1133762136917676145');
+
+        const opponent = fetchId(msg.content)
+
+        console.log("received dm")
+        console.log(opponent);
+        if (gameChannel.guild.members.cache.has(opponent)
+        && fetchId(msg.content) !== '1133762136917676145') {
+            msg.author.send('Your opponent is: ' +
+                msg.content);
+        } else {
+            msg.author.send('This user are not available to play :( ')
+        }
+    }
+
     if (msg.author.id === client.user.id) {
         return;
     }
@@ -127,7 +157,7 @@ function generateRow(guessedWord) {
 
 client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'playWordleButton') {
-        interaction.reply("Game has started")
+        interaction.reply("Wordle has started")
         wordle().then( (randomWord) => {
             const channel = client.channels.cache.get('1133762136917676145');
             for (let i = 0; i < 5; i++) {
@@ -140,6 +170,18 @@ client.on('interactionCreate', async (interaction) => {
             .catch((err) => {
                 console.error('Error:', err);
             });
+    }
+    if (interaction.customId === 'playTwentyQsButton') {
+        twentyQsStart = true;
+        interaction.reply("20 Questions has started. Please check DM for instruction")
+        await interaction.user.send("Welcome to 20 Questions\n" +
+            "Enter the username of your opponent from the server")
+        gameChannel = client.channels.cache.get(
+            interaction.channelId.toString());
+
+        // if (allowedUserIds.includes(interaction.user.id) && twentyQsStart) {
+        //     await interaction.user.send(interaction.user.toString + "is an allowed user")
+        // }
     }
 })
 
