@@ -1,6 +1,6 @@
 const {
     Client, Events, MessageActionRow, MessageButton, ButtonBuilder, GuildChannel, Message,
-    ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder
+    ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, DMChannel
 } = require('discord.js');
 const dotenv = require('dotenv');
 
@@ -36,6 +36,11 @@ client.once(Events.ClientReady, c => {
 const playWordleButton = new ButtonBuilder()
     .setCustomId('playWordleButton')
     .setLabel('Play Wordle')
+    .setStyle(1);
+
+const playTwentyQsButton = new ButtonBuilder()
+    .setCustomId('playTwentyQsButton')
+    .setLabel('Play 20 Questions')
     .setStyle(1);
 
 const gameMenu = new ActionRowBuilder()
@@ -82,6 +87,7 @@ client.on('messageCreate', async (msg) => {
     if (msg.author.id === client.user.id) {
         return;
     }
+
     if (msg.content.includes("hi duck")) {
         await msg.reply("hi zoe and pooja")
     }
@@ -125,6 +131,25 @@ client.on('messageCreate', async (msg) => {
     }
 })
 
+
+function fetchId(desiredUserName) {
+
+    let guildsUsers = [];
+    gameChannel.members.forEach(member => {
+        guildsUsers.push(member.user.username.toString())
+    });
+
+    for (let i = 0; i < guildsUsers.length; i++) {
+        console.log("currentMem" + guildsUsers[i]);
+        if (guildsUsers[i] === desiredUserName) {
+
+            return guildsUsers[i].userId
+        }
+    }
+
+    return '1133762136917676145';
+}
+
 function generateRow(guessedWord) {
     const row3 = new ActionRowBuilder();
 
@@ -154,6 +179,7 @@ function generateRow(guessedWord) {
     }
     return row3;
 }
+
 
 client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'playWordleButton') {
