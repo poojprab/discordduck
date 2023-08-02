@@ -320,6 +320,19 @@ client.on('interactionCreate', async (interaction) => {
 
 })
 
+function isTwentyQsOver() {
+    if (currentQNum === 21) {
+        // client.users.send(questioner, "They couldn't guess! You Won !")
+        // client.users.send(questionee, "You ran out of guesses! You Lost !\n"
+        //     + "The secret word was: " + secretWord);
+        twentyQsStart = false;
+        currentQNum = 1;
+        return true;
+    }
+    return false;
+}
+
+
 function wordle() {
     return new Promise((resolve, reject) => {
         read((err, data) => {
