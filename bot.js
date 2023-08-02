@@ -25,12 +25,19 @@ let wordleStart = false;
 let correctWord = '';
 
 let twentyQsStart = false;
+let setupPlayers = false;
 
 let gameChannel = '';
+
+let questioner = ''
+let questionee = ''
+let secretWord = ''
+let currentQNum = 1;
 
 
 client.once(Events.ClientReady, c => {
     console.log('Bot is ready to speak!!!');
+    gameChannel = client.channels.cache.get('1133762136917676145');
 });
 
 const playWordleButton = new ButtonBuilder()
@@ -57,35 +64,84 @@ for (let i = 0; i < 5; i++) {
         .setDisabled(true));
 }
 
-//const allowedUserIds = ['353053962922098700', '744654927283880012']; // Replace with the actual IDs of the two members you want to allow
-const allowedUserIds = []; // Replace with the actual IDs of the two members you want to allow
-
-
 client.on('messageCreate', async (msg) => {
 
     if (msg.channel instanceof DMChannel) {
-        // Respond to the private message
         if (msg.author.id === client.user.id) {
             return;
         }
-
-        //const channel = client.channels.cache.get('1133762136917676145');
-
-        const opponent = fetchId(msg.content)
-
         console.log("received dm")
-        console.log(opponent);
-        if (gameChannel.guild.members.cache.has(opponent)
-        && fetchId(msg.content) !== '1133762136917676145') {
-            msg.author.send('Your opponent is: ' +
-                msg.content);
-        } else {
-            msg.author.send('This user are not available to play :( ')
-        }
-    }
+        if (twentyQsStart === true) {
+            console.log("twenty questions as started (button clicked)")
+            if (setupPlayers === true) {
+                console.log("players are currently being setup")
+                // Respond to the private message
+                if (msg.author.id === client.user.id) {
+                    return;
+                }
 
-    if (msg.author.id === client.user.id) {
-        return;
+                const opponent = fetchId(msg.content.trim())
+
+                console.log(opponent);
+                if (gameChannel.guild.members.cache.has(opponent)
+                    && opponent !== '1133762136917676145') {
+                    questioner = msg.author.id;
+                    questionee = opponent;
+                    await msg.author.send('Your opponent is: ' +
+                        msg.content + '\n Request Sent! Waiting for opponent response');
+                    //await client.users.send(opponent, msg.author.username.toString() + ' has challenged you to 20 questions')
+                    await client.users.send(opponent,{
+                        content: msg.author.username.toString() + ' has challenged you to 20 questions',
+                        components: [new ActionRowBuilder()
+                            .addComponents(new ButtonBuilder()
+                                .setCustomId('accept20')
+                                .setLabel('Accept the Challenge')
+                                .setStyle(1))
+                            .addComponents(new ButtonBuilder()
+                                .setCustomId('reject20')
+                                .setLabel('Reject the Challenge')
+                                .setStyle(2))
+                        ]
+                    } )
+                } else {
+                    await msg.author.send('This user are not available to play :( ')
+                }
+                setupPlayers = false;
+            } else {
+                if (secretWord === '') {
+                    console.log("players have been setup, choosing secret word")
+                    secretWord = msg.content.trim();
+                    console.log("Secret Word is: " + secretWord)
+                    await client.users.send(questioner, "Waiting for first question...");
+                    await client.users.send(questionee, "Opponent has chosen a word! Ask question or enter the correct word");
+                } else {
+                    if (msg.author.id === questionee && currentQNum < 21) {
+                        await client.users.send(questioner, {
+                                content: "Question " + currentQNum + ": " + msg.content + "?",
+                                components: [new ActionRowBuilder()
+                                    .addComponents(new ButtonBuilder()
+                                        .setCustomId('Yes20')
+                                        .setLabel('Yes')
+                                        .setStyle(2))
+                                    .addComponents(new ButtonBuilder()
+                                        .setCustomId('No20')
+                                        .setLabel('No')
+                                        .setStyle(4))
+                                    .addComponents(new ButtonBuilder()
+                                        .setCustomId('Sometimes20')
+                                        .setLabel('Maybe')
+                                        .setStyle(1))
+                                    .addComponents(new ButtonBuilder()
+                                        .setCustomId('YouGotIt')
+                                        .setLabel('You Got It !')
+                                        .setStyle(3))
+                                ]
+                            }
+                            );
+                    }
+                }
+            }
+        }
     }
 
     if (msg.content.includes("hi duck")) {
@@ -98,7 +154,6 @@ client.on('messageCreate', async (msg) => {
         });
     }
     if (msg.content.startsWith("!guess") && wordleStart) {
-        const channel = client.channels.cache.get('1133762136917676145');
         const currentGuess = (msg.content.substring(msg.content.indexOf("!guess") + 6)).trim().toLowerCase();
         if (currentGuess.length < 5 || currentGuess.length > 5) {
             await msg.reply("Invalid Guess");
@@ -107,24 +162,21 @@ client.on('messageCreate', async (msg) => {
             await msg.reply("Your guesses so far: " + guesses);
         }
 
-        console.log("LENGTH OF THE ARRAY: " + guesses.length)
-
 
         for (let i = guesses.length; i > 0; i--) {
-            console.log("HI")
-            channel.send({ content: ' ', components: [generateRow(guesses[i - 1])] });
+            gameChannel.send({ content: ' ', components: [generateRow(guesses[i - 1])] });
         }
 
         for (let i = 0; i < (5 - guesses.length); i++) {
-            channel.send({ content: ' ', components: [row2] });
+            gameChannel.send({ content: ' ', components: [row2] });
         }
 
         if (guesses[0] === correctWord) {
-            channel.send('you won !');
+            gameChannel.send('you won !');
             guesses = []
             wordleStart = false;
         } else if (guesses.length === 5 && guesses[0] !== correctWord) {
-            channel.send('you lost :(')
+            gameChannel.send('you lost :(')
             guesses = []
             wordleStart = false;
         }
@@ -135,18 +187,17 @@ client.on('messageCreate', async (msg) => {
 function fetchId(desiredUserName) {
 
     let guildsUsers = [];
+    let guildsUsersId = [];
     gameChannel.members.forEach(member => {
         guildsUsers.push(member.user.username.toString())
+        guildsUsersId.push(member.user.id.toString())
     });
 
     for (let i = 0; i < guildsUsers.length; i++) {
-        console.log("currentMem" + guildsUsers[i]);
         if (guildsUsers[i] === desiredUserName) {
-
-            return guildsUsers[i].userId
+            return guildsUsersId[i];
         }
     }
-
     return '1133762136917676145';
 }
 
@@ -185,9 +236,9 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'playWordleButton') {
         interaction.reply("Wordle has started")
         wordle().then( (randomWord) => {
-            const channel = client.channels.cache.get('1133762136917676145');
+            //const channel = client.channels.cache.get('1133762136917676145');
             for (let i = 0; i < 5; i++) {
-                channel.send({ content: ' ', components: [row2] });
+                gameChannel.send({ content: ' ', components: [row2] });
             }
             wordleStart = true;
             //playWordleButton.setDisabled(true);
@@ -198,17 +249,75 @@ client.on('interactionCreate', async (interaction) => {
             });
     }
     if (interaction.customId === 'playTwentyQsButton') {
+        playTwentyQsButton.setDisabled()
         twentyQsStart = true;
         interaction.reply("20 Questions has started. Please check DM for instruction")
         await interaction.user.send("Welcome to 20 Questions\n" +
             "Enter the username of your opponent from the server")
         gameChannel = client.channels.cache.get(
             interaction.channelId.toString());
-
-        // if (allowedUserIds.includes(interaction.user.id) && twentyQsStart) {
-        //     await interaction.user.send(interaction.user.toString + "is an allowed user")
-        // }
+        setupPlayers = true;
     }
+
+    if (interaction.customId === 'reject20') {
+        twentyQsStart = false;
+        await client.users.send(questioner, (await client.users.fetch(questionee)).username + ' has rejected your request :(');
+        interaction.reply('successfully rejected game request')
+        setupPlayers = false;
+    }
+    if (interaction.customId === 'accept20') {
+        await client.users.send(questioner, (await client.users.fetch(questionee)).username + ' has accepted your request\n')
+        await client.users.send(questioner, 'Enter secret word: ')
+        interaction.reply('successfully joined the game, please wait while opponent choose their secret word')
+        setupPlayers = false;
+    }
+
+    if (interaction.customId === 'Yes20') {
+        isTwentyQsOver();
+        await client.users.send(questionee, "Question " + currentQNum + " Answer: Yes")
+        currentQNum++
+        if (isTwentyQsOver()) {
+            interaction.reply("They couldn't guess it! You won!")
+            await client.users.send(questionee, "You ran out of guesses! You Lost !\n"
+                + "The secret word was: " + secretWord);
+        } else {
+            interaction.reply("You chose Yes. Waiting for new questions...")
+        }
+    }
+
+    if (interaction.customId === 'No20') {
+        await client.users.send(questionee, "Question " + currentQNum + " Answer: No")
+        currentQNum++
+        if (isTwentyQsOver()) {
+            interaction.reply("They couldn't guess it! You won!")
+            await client.users.send(questionee, "You ran out of guesses! You Lost !\n"
+                + "The secret word was: " + secretWord);
+        } else {
+            interaction.reply("You chose No. Waiting for new questions...")
+        }
+    }
+
+    if (interaction.customId === 'Sometimes20') {
+        isTwentyQsOver();
+        await client.users.send(questionee, "Question " + currentQNum + " Answer: Maybe")
+        currentQNum++
+        if (isTwentyQsOver()) {
+            interaction.reply("They couldn't guess it! You won!")
+            await client.users.send(questionee, "You ran out of guesses! You Lost !\n"
+                + "The secret word was: " + secretWord);
+        } else {
+            interaction.reply("You chose Maybe. Waiting for new questions...")
+        }
+    }
+
+    if (interaction.customId === 'YouGotIt') {
+        isTwentyQsOver();
+        interaction.reply("They got it! You lost :(")
+        await client.users.send(questionee, "You guessed it right! You Won !")
+        twentyQsStart = false;
+        currentQNum = 1;
+    }
+
 })
 
 function wordle() {
