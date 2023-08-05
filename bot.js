@@ -34,6 +34,7 @@ let player1 = ''
 let player2 = ''
 let secretWord = ''
 let currentQNum = 1;
+let randomLetter = [];
 
 
 client.once(Events.ClientReady, c => {
@@ -61,9 +62,15 @@ const playTwentyQsButton = new ButtonBuilder()
     .setLabel('Play 20 Questions')
     .setStyle(1);
 
+const playAnagram = new ButtonBuilder()
+    .setCustomId('playAnagram')
+    .setLabel('Play Anagram')
+    .setStyle(1);
+
 const gameMenu = new ActionRowBuilder()
     .addComponents(playWordleButton)
-    .addComponents(playTwentyQsButton);
+    .addComponents(playTwentyQsButton)
+    .addComponents(playAnagram);
 
 
 const row2 = new ActionRowBuilder()
@@ -342,6 +349,37 @@ client.on('interactionCreate', async (interaction) => {
             "Enter the username of your opponent from the server")
         gameChannel = client.channels.cache.get(
             interaction.channelId.toString());
+        setupPlayers = true;
+    }
+
+    if (interaction.customId === 'playAnagram') {
+        anagramStart = true;
+        playAnagram.setDisabled()
+
+        //non-vowel letters
+        while (randomLetter.length < 3) {
+            let s = String.fromCharCode(Math.floor(Math.random() * (90 - 65 + 1)) + 65);
+            if (s !== 'A' && s !== 'E' && s !== 'I' && s !== 'O' && s !== 'U') {
+                randomLetter.push(s);
+            }
+        }
+
+        while (randomLetter.length < 5) {
+            let s = String.fromCharCode(Math.floor(Math.random() * (90 - 65 + 1)) + 65);
+            if (s === 'A' || s === 'E' || s === 'I' || s === 'O' || s === 'U') {
+                randomLetter.push(s);
+            }
+        }
+
+
+        main(randomLetter.join('')).then(result => {
+            anagramList = result
+        })
+        interaction.reply("Anagram has started. Please check DM for instruction")
+        await interaction.user.send("Welcome to Anagram\n" +
+            "Enter the username of your opponent from the server")
+        gameChannel = client.channels.cache.get(interaction.channelId.toString());
+
         setupPlayers = true;
     }
 
