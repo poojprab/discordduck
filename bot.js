@@ -349,6 +349,7 @@ async function main(input) {
     return actualAnagram;
 }
 
+
 function fetchId(desiredUserName) {
 
     let guildsUsers = [];
@@ -400,10 +401,10 @@ function generateRow(guessedWord) {
 client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'playWordleButton') {
         interaction.reply("Wordle has started")
-        wordle().then( (randomWord) => {
+        wordle().then((randomWord) => {
             //const channel = client.channels.cache.get('1133762136917676145');
             for (let i = 0; i < 5; i++) {
-                gameChannel.send({ content: ' ', components: [row2] });
+                gameChannel.send({content: ' ', components: [row2]});
             }
             wordleStart = true;
             //playWordleButton.setDisabled(true);
@@ -461,11 +462,13 @@ client.on('interactionCreate', async (interaction) => {
         interaction.reply('successfully rejected game request')
         setupPlayers = false;
     }
+    
     if (interaction.customId === 'accept20') {
         await client.users.send(player1, (await client.users.fetch(player2)).username + ' has accepted your request\n')
         interaction.reply('successfully joined the game! Please wait')
 
         if (anagramStart === true) {
+            let timer = 60;
             await client.users.send(player1, 'The Letters Are:' + randomLetter.join(' ')
                 + '\n Type Your Anagrams!');
 
@@ -488,8 +491,8 @@ client.on('interactionCreate', async (interaction) => {
 
     }
 
-        setupPlayers = false;
-    }
+    setupPlayers = false;
+}
 
     if (interaction.customId === 'Yes20') {
         isTwentyQsOver();
@@ -541,9 +544,6 @@ client.on('interactionCreate', async (interaction) => {
 
 function isTwentyQsOver() {
     if (currentQNum === 21) {
-        // client.users.send(player1, "They couldn't guess! You Won !")
-        // client.users.send(player2, "You ran out of guesses! You Lost !\n"
-        //     + "The secret word was: " + secretWord);
         twentyQsStart = false;
         currentQNum = 1;
         return true;
