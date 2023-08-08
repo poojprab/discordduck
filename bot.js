@@ -19,6 +19,7 @@ const {response} = require("express");
 const fs = require('fs');
 const readline = require('readline');
 const {stringify} = require("nodemon/lib/utils");
+const {cache} = require("express/lib/application");
 
 let guesses = [];
 let wordleStart = false;
@@ -115,11 +116,25 @@ async function settingUpPlayers(senderID, gameType, msg) {
         } )
     } else {
         await msg.author.send('This user are not available to play :( ')
+        if (gameType === '20 Question') {
+            twentyQsStart = false;
+        } else {
+            anagramStart = false;
+        }
     }
     setupPlayers = false;
 }
 
 client.on('messageCreate', async (msg) => {
+
+    if (msg.content.startsWith("!quit")) {
+        twentyQsStart = false;
+        anagramStart = false;
+        wordleStart = false;
+        playWordleButton.setDisabled(false);
+        playTwentyQsButton.setDisabled(false);
+        playAnagram.setDisabled(false);
+    }
 
     if (msg.channel instanceof DMChannel) {
         if (msg.author.id === client.user.id) {
@@ -222,17 +237,51 @@ client.on('messageCreate', async (msg) => {
 
     if (msg.content.startsWith("!guess")) {
         const currentGuess = (msg.content.substring(msg.content.indexOf("!guess") + 6)).trim().toLowerCase();
-        main(currentGuess);
+        await main(currentGuess);
         //fetch(url+currentGuess).then(res => res.json()).then(result => isInDictionary(result));
     }
 })
 
 async function checkIfInDictionary(word) {
-    const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.title; // Assuming the API returns an object with a property indicating if the word is in the dictionary
+    // const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`;
+    // const response = await fetch(url);
+    // const data = await response.json();
+    // return data.title; // Assuming the API returns an object with a property indicating if the word is in the dictionary
+
+
+    if (word.size === 3) {
+        fs.readFile('3-letter-words.txt',  (err, data) => {
+            if (err) throw err;
+            if (data.includes(word)) {
+                return true;
+            }
+        })
+    } else if (word.size === 4) {
+        if (readAndParseFile('4-letter-words.txt').toString().includes(word.toUpperCase())) {
+            return true;
+        }
+    } else {
+        if (readAndParseFile('fiveLetters.txt').toString().includes(word)) {
+            return true;
+        }
+    }
+
+    return false;
 }
+
+function readAndParseFile(filePath) {
+    const stringBuilder = [];
+
+    try {
+        const fileContent = fs.readFileSync(filePath, "utf-8");
+        stringBuilder.push(fileContent);
+    } catch (error) {
+        console.error("Error reading file:", error);
+    }
+
+    return stringBuilder.join("");
+}
+
 
 function generateAnagrams(word, length) {
     if (length === 0) {
@@ -257,23 +306,46 @@ async function main(input) {
 
     const anagrams3 = generateAnagrams(inputLetters, 3);
     const anagrams4 = generateAnagrams(inputLetters, 4);
-    //const anagrams5 = generateAnagrams(inputLetters, 5);
-    const newArray = anagrams3.concat(anagrams4);
-
-
-    console.log("\n3-Letter Anagrams in Dictionary:");
+    const anagrams5 = generateAnagrams(inputLetters, 5);
     let x = 0;
 
     let actualAnagram = []
-    for (const anagram of newArray) {
+    console.log("\n3-Letter Anagrams in Dictionary:");
+    for (const anagram of anagrams3) {
         const isInDictionary = await checkIfInDictionary(anagram);
-        if (!isInDictionary) {
+        if (isInDictionary) {
             actualAnagram.push(anagram);
             console.log(x + anagram);
             x++
         }
     }
+
+    console.log("\n4-Letter Anagrams in Dictionary:");
+    for (const anagram of anagrams4) {
+        const isInDictionary = await checkIfInDictionary(anagram);
+        if (isInDictionary) {
+            actualAnagram.push(anagram);
+            console.log(x + anagram);
+            x++
+        }
+    }
+
+    console.log("\n5-Letter Anagrams in Dictionary:");
+    for (const anagram of anagrams5) {
+        const isInDictionary = await checkIfInDictionary(anagram);
+        if (isInDictionary) {
+            actualAnagram.push(anagram);
+            console.log(x + anagram);
+            x++
+        }
+    }
+
+
     console.log(actualAnagram)
+
+    // console.log(allAnagrams.length)
+    // let actualAnagram = await rateLimitedRequests(allAnagrams);
+    console.log(actualAnagram);
     return actualAnagram;
 }
 
@@ -395,10 +467,26 @@ client.on('interactionCreate', async (interaction) => {
 
         if (anagramStart === true) {
             await client.users.send(player1, 'The Letters Are:' + randomLetter.join(' ')
-                + '\n Type Your Anagrams!' );
+                + '\n Type Your Anagrams!');
+
             await client.users.send(player2, 'The Letters Are:' + randomLetter.join(' ')
-                + '\n Type Your Anagrams!' );
-        }
+                + '\n Type Your Anagrams!');
+
+            let timerPlayer1 = await client.users.send(player1, 'Time Left: ' + timer)
+            let timerPlayer2 = await client.users.send(player2, 'Time Left: ' + timer)
+            const interval = setInterval(() => {
+                timer--;
+                timerPlayer1.edit('Time Left: ' + timer)
+                timerPlayer2.edit('Time Left: ' + timer)
+                if (timer === 0) {
+                    clearInterval(interval);
+                    client.users.send(player1, "Time's Up!")
+                    client.users.send(player2, "Time's Up!")
+                    anagramStart = false;
+                }
+            }, 1000)
+
+    }
 
         setupPlayers = false;
     }

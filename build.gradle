@@ -13,8 +13,8 @@ checkstyle {
 }
 
 application {
-    mainModule = 'starterCode'
-    mainClass = 'starterCode.Driver'
+    mainModule = 'discordduck'
+    mainClass = 'discordduck.Main'
 }
 
 test {
